@@ -354,6 +354,26 @@ h1 {
   margin: 6px 0 0;
 }
 
+
+.requestDetails {
+  margin-top: 14px;
+}
+
+.requestDetails summary {
+  list-style: none;
+  cursor: pointer;
+  border: none;
+  user-select: none;
+}
+
+.requestDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.requestDetails .requestForm {
+  margin-top: 10px;
+}
+
 .requestForm {
   margin-top: 14px;
   background: #F8FAFC;

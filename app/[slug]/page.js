@@ -201,34 +201,38 @@ export default async function AgencyPage({ params, searchParams }) {
 
                 {vehicle.description && <p className="description">{vehicle.description}</p>}
 
-                <form action={submitBookingRequest} className="requestForm">
-                  <input type="hidden" name="slug" value={slug} />
-                  <input type="hidden" name="agency_id" value={agency.id} />
-                  <input type="hidden" name="vehicle_id" value={vehicle.id} />
+                <details className="requestDetails">
+                  <summary className="reserveBtn">Demander ce véhicule</summary>
 
-                  <div className="formTitle">Demander ce véhicule</div>
+                  <form action={submitBookingRequest} className="requestForm">
+                    <input type="hidden" name="slug" value={slug} />
+                    <input type="hidden" name="agency_id" value={agency.id} />
+                    <input type="hidden" name="vehicle_id" value={vehicle.id} />
 
-                  <div className="formGrid">
-                    <input name="first_name" placeholder="Prénom *" required />
-                    <input name="last_name" placeholder="Nom" />
-                    <input name="phone" placeholder="Téléphone *" required />
-                    <input name="email" placeholder="Email" type="email" />
-                    <input name="start_date" type="date" />
-                    <input name="end_date" type="date" />
-                    <input name="start_hour" type="time" />
-                    <input name="end_hour" type="time" />
-                  </div>
+                    <div className="formTitle">Vos informations</div>
 
-                  <textarea
-                    name="message"
-                    placeholder={`Message : je souhaite réserver ${vehicle.name || vehicle.brand || "ce véhicule"}`}
-                    rows="3"
-                  />
+                    <div className="formGrid">
+                      <input name="first_name" placeholder="Prénom *" required />
+                      <input name="last_name" placeholder="Nom" />
+                      <input name="phone" placeholder="Téléphone *" required />
+                      <input name="email" placeholder="Email" type="email" />
+                      <input name="start_date" type="date" />
+                      <input name="end_date" type="date" />
+                      <input name="start_hour" type="time" />
+                      <input name="end_hour" type="time" />
+                    </div>
 
-                  <button className="reserveBtn" type="submit">
-                    Envoyer ma demande
-                  </button>
-                </form>
+                    <textarea
+                      name="message"
+                      placeholder={`Message : je souhaite réserver ${vehicle.name || vehicle.brand || "ce véhicule"}`}
+                      rows="3"
+                    />
+
+                    <button className="reserveBtn" type="submit">
+                      Envoyer ma demande
+                    </button>
+                  </form>
+                </details>
 
                 {waLink && (
                   <a
