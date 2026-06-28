@@ -327,3 +327,94 @@ h1 {
     display: block;
   }
 }
+
+
+.successBox,
+.errorBox {
+  margin-top: 16px;
+  border-radius: 22px;
+  padding: 16px 18px;
+  font-weight: 800;
+}
+
+.successBox {
+  background: #ECFDF3;
+  border: 1px solid #ABEFC6;
+  color: #067647;
+}
+
+.errorBox {
+  background: #FEF3F2;
+  border: 1px solid #FECDCA;
+  color: #B42318;
+}
+
+.successBox p,
+.errorBox p {
+  margin: 6px 0 0;
+}
+
+.requestForm {
+  margin-top: 14px;
+  background: #F8FAFC;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 12px;
+}
+
+.formTitle {
+  font-weight: 950;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.requestForm input,
+.requestForm textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  outline: none;
+  background: white;
+  color: var(--text);
+}
+
+.requestForm textarea {
+  margin-top: 8px;
+  resize: vertical;
+}
+
+.requestForm input:focus,
+.requestForm textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(10, 73, 255, 0.10);
+}
+
+.requestForm button {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.whatsappSmall {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  color: #16A34A;
+  font-weight: 950;
+}
+
+@media (max-width: 640px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

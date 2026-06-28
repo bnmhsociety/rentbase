@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { signedPhotoUrl, supabaseFetch } from "../../lib/supabase";
+import { notFound, redirect } from "next/navigation";
+import { signedPhotoUrl, supabaseFetch, supabaseInsert } from "../../lib/supabase";
 
 function money(value) {
   const number = Number(value || 0);
@@ -29,9 +29,57 @@ function socialUrl(value) {
   return `https://${value}`;
 }
 
-export default async function AgencyPage({ params }) {
+function cleanText(value) {
+  return String(value || "").trim();
+}
+
+async function submitBookingRequest(formData) {
+  "use server";
+
+  const slug = cleanText(formData.get("slug"));
+  const agencyId = cleanText(formData.get("agency_id"));
+  const vehicleId = cleanText(formData.get("vehicle_id"));
+  const firstName = cleanText(formData.get("first_name"));
+  const lastName = cleanText(formData.get("last_name"));
+  const phone = cleanText(formData.get("phone"));
+  const email = cleanText(formData.get("email"));
+  const startDate = cleanText(formData.get("start_date"));
+  const endDate = cleanText(formData.get("end_date"));
+  const startHour = cleanText(formData.get("start_hour"));
+  const endHour = cleanText(formData.get("end_hour"));
+  const message = cleanText(formData.get("message"));
+
+  if (!slug || !agencyId || !vehicleId || !firstName || !phone) {
+    redirect(`/${slug || ""}?demande=erreur`);
+  }
+
+  await supabaseInsert(
+    "/rest/v1/booking_requests",
+    {
+      agency_id: agencyId,
+      vehicle_id: vehicleId,
+      first_name: firstName,
+      last_name: lastName || null,
+      phone,
+      email: email || null,
+      start_date: startDate || null,
+      end_date: endDate || null,
+      start_hour: startHour || null,
+      end_hour: endHour || null,
+      message: message || null,
+      status: "Nouvelle",
+    },
+    { service: true }
+  );
+
+  redirect(`/${slug}?demande=envoyee`);
+}
+
+export default async function AgencyPage({ params, searchParams }) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const slug = String(resolvedParams?.slug || "").toLowerCase();
+  const demandeStatus = String(resolvedSearchParams?.demande || "");
 
   const agencies = await supabaseFetch(
     `/rest/v1/agencies?website_slug=eq.${encodeURIComponent(slug)}&select=id,name,email,phone,address,city,website_name,website_slug,website_phone_prefix,website_phone,website_intro,website_whatsapp,website_snapchat,website_tiktok,website_instagram,website_profile_photo_path&limit=1`,
@@ -99,6 +147,20 @@ export default async function AgencyPage({ params }) {
         </div>
       </section>
 
+      {demandeStatus === "envoyee" && (
+        <section className="successBox">
+          <strong>Demande envoyée.</strong>
+          <p>L’agence a bien reçu votre demande de réservation.</p>
+        </section>
+      )}
+
+      {demandeStatus === "erreur" && (
+        <section className="errorBox">
+          <strong>Demande non envoyée.</strong>
+          <p>Merci de remplir au minimum votre prénom et votre téléphone.</p>
+        </section>
+      )}
+
       <section className="sectionTitle">
         <h2>Véhicules disponibles</h2>
         <p>{vehiclesWithPhotos.length} véhicule(s) disponible(s)</p>
@@ -139,13 +201,42 @@ export default async function AgencyPage({ params }) {
 
                 {vehicle.description && <p className="description">{vehicle.description}</p>}
 
+                <form action={submitBookingRequest} className="requestForm">
+                  <input type="hidden" name="slug" value={slug} />
+                  <input type="hidden" name="agency_id" value={agency.id} />
+                  <input type="hidden" name="vehicle_id" value={vehicle.id} />
+
+                  <div className="formTitle">Demander ce véhicule</div>
+
+                  <div className="formGrid">
+                    <input name="first_name" placeholder="Prénom *" required />
+                    <input name="last_name" placeholder="Nom" />
+                    <input name="phone" placeholder="Téléphone *" required />
+                    <input name="email" placeholder="Email" type="email" />
+                    <input name="start_date" type="date" />
+                    <input name="end_date" type="date" />
+                    <input name="start_hour" type="time" />
+                    <input name="end_hour" type="time" />
+                  </div>
+
+                  <textarea
+                    name="message"
+                    placeholder={`Message : je souhaite réserver ${vehicle.name || vehicle.brand || "ce véhicule"}`}
+                    rows="3"
+                  />
+
+                  <button className="reserveBtn" type="submit">
+                    Envoyer ma demande
+                  </button>
+                </form>
+
                 {waLink && (
                   <a
-                    className="reserveBtn"
+                    className="whatsappSmall"
                     href={`${waLink}?text=${encodeURIComponent(`Bonjour, je souhaite réserver : ${vehicle.name || vehicle.brand || "un véhicule"}`)}`}
                     target="_blank"
                   >
-                    Demander une réservation
+                    Ou contacter sur WhatsApp
                   </a>
                 )}
               </div>
