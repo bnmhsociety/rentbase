@@ -1,5 +1,6 @@
-import { notFound, redirect } from "next/navigation";
-import { signedPhotoUrl, supabaseFetch, supabaseInsert } from "../../lib/supabase";
+import { notFound } from "next/navigation";
+import BookingWizard from "./BookingWizard";
+import { signedPhotoUrl, supabaseFetch } from "../../lib/supabase";
 
 function money(value) {
   const number = Number(value || 0);
@@ -29,50 +30,8 @@ function socialUrl(value) {
   return `https://${value}`;
 }
 
-function cleanText(value) {
-  return String(value || "").trim();
-}
-
-async function submitBookingRequest(formData) {
-  "use server";
-
-  const slug = cleanText(formData.get("slug"));
-  const agencyId = cleanText(formData.get("agency_id"));
-  const vehicleId = cleanText(formData.get("vehicle_id"));
-  const firstName = cleanText(formData.get("first_name"));
-  const lastName = cleanText(formData.get("last_name"));
-  const phone = cleanText(formData.get("phone"));
-  const email = cleanText(formData.get("email"));
-  const startDate = cleanText(formData.get("start_date"));
-  const endDate = cleanText(formData.get("end_date"));
-  const startHour = cleanText(formData.get("start_hour"));
-  const endHour = cleanText(formData.get("end_hour"));
-  const message = cleanText(formData.get("message"));
-
-  if (!slug || !agencyId || !vehicleId || !firstName || !phone) {
-    redirect(`/${slug || ""}?demande=erreur`);
-  }
-
-  await supabaseInsert(
-    "/rest/v1/booking_requests",
-    {
-      agency_id: agencyId,
-      vehicle_id: vehicleId,
-      first_name: firstName,
-      last_name: lastName || null,
-      phone,
-      email: email || null,
-      start_date: startDate || null,
-      end_date: endDate || null,
-      start_hour: startHour || null,
-      end_hour: endHour || null,
-      message: message || null,
-      status: "Nouvelle",
-    },
-    { service: true }
-  );
-
-  redirect(`/${slug}?demande=envoyee`);
+function activeBooking(booking) {
+  return booking.status !== "Annulée" && booking.status !== "Terminée";
 }
 
 export default async function AgencyPage({ params, searchParams }) {
@@ -90,17 +49,27 @@ export default async function AgencyPage({ params, searchParams }) {
   if (!agency) notFound();
 
   const vehicles = await supabaseFetch(
-    `/rest/v1/vehicles?agency_id=eq.${agency.id}&status=eq.Disponible&select=id,name,brand,model,category,status,price_per_day,deposit_amount,mileage,fuel,gearbox,seats,power,year,color,description,main_photo_path,photo_url&order=created_at.desc`,
+    `/rest/v1/vehicles?agency_id=eq.${agency.id}&select=id,name,brand,model,category,status,price_per_day,deposit_amount,mileage,fuel,gearbox,seats,power,year,color,description,main_photo_path,photo_url&order=created_at.desc`,
     { service: true }
   );
+
+  const bookings = await supabaseFetch(
+    `/rest/v1/bookings?agency_id=eq.${agency.id}&select=id,vehicle_id,start_date,end_date,status&order=start_date.asc`,
+    { service: true }
+  );
+
+  const activeBookings = (bookings || []).filter(activeBooking);
 
   const profilePhoto = await signedPhotoUrl(agency.website_profile_photo_path);
 
   const vehiclesWithPhotos = await Promise.all(
-    (vehicles || []).map(async (vehicle) => ({
-      ...vehicle,
-      image: await signedPhotoUrl(vehicle.main_photo_path || vehicle.photo_url),
-    }))
+    (vehicles || [])
+      .filter((vehicle) => vehicle.status !== "Maintenance")
+      .map(async (vehicle) => ({
+        ...vehicle,
+        image: await signedPhotoUrl(vehicle.main_photo_path || vehicle.photo_url),
+        bookings: activeBookings.filter((booking) => booking.vehicle_id === vehicle.id),
+      }))
   );
 
   const displayName = agency.website_name || agency.name || "Agence de location";
@@ -157,13 +126,13 @@ export default async function AgencyPage({ params, searchParams }) {
       {demandeStatus === "erreur" && (
         <section className="errorBox">
           <strong>Demande non envoyée.</strong>
-          <p>Merci de remplir au minimum votre prénom et votre téléphone.</p>
+          <p>Merci de remplir les informations obligatoires.</p>
         </section>
       )}
 
       <section className="sectionTitle">
         <h2>Véhicules disponibles</h2>
-        <p>{vehiclesWithPhotos.length} véhicule(s) disponible(s)</p>
+        <p>{vehiclesWithPhotos.length} véhicule(s) visible(s)</p>
       </section>
 
       {vehiclesWithPhotos.length === 0 ? (
@@ -201,38 +170,13 @@ export default async function AgencyPage({ params, searchParams }) {
 
                 {vehicle.description && <p className="description">{vehicle.description}</p>}
 
-                <details className="requestDetails">
-                  <summary className="reserveBtn">Demander ce véhicule</summary>
-
-                  <form action={submitBookingRequest} className="requestForm">
-                    <input type="hidden" name="slug" value={slug} />
-                    <input type="hidden" name="agency_id" value={agency.id} />
-                    <input type="hidden" name="vehicle_id" value={vehicle.id} />
-
-                    <div className="formTitle">Vos informations</div>
-
-                    <div className="formGrid">
-                      <input name="first_name" placeholder="Prénom *" required />
-                      <input name="last_name" placeholder="Nom" />
-                      <input name="phone" placeholder="Téléphone *" required />
-                      <input name="email" placeholder="Email" type="email" />
-                      <input name="start_date" type="date" />
-                      <input name="end_date" type="date" />
-                      <input name="start_hour" type="time" />
-                      <input name="end_hour" type="time" />
-                    </div>
-
-                    <textarea
-                      name="message"
-                      placeholder={`Message : je souhaite réserver ${vehicle.name || vehicle.brand || "ce véhicule"}`}
-                      rows="3"
-                    />
-
-                    <button className="reserveBtn" type="submit">
-                      Envoyer ma demande
-                    </button>
-                  </form>
-                </details>
+                <BookingWizard
+                  agency={{ id: agency.id }}
+                  vehicle={vehicle}
+                  slug={slug}
+                  vehicleBookings={vehicle.bookings}
+                  waLink={waLink}
+                />
 
                 {waLink && (
                   <a

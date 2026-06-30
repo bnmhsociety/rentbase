@@ -438,3 +438,348 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* RentBase - tunnel demande véhicule */
+.wizardOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(7, 16, 36, 0.72);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.wizardPage {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  background: var(--bg);
+  border-radius: 34px;
+  padding: 18px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+}
+
+.wizardHeader {
+  background: linear-gradient(135deg, var(--dark), var(--blue));
+  color: white;
+  border-radius: 28px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.wizardHeader h2 {
+  margin: 6px 0;
+  font-size: clamp(24px, 4vw, 42px);
+  letter-spacing: -1px;
+}
+
+.wizardHeader p {
+  margin: 0;
+  color: rgba(255,255,255,.78);
+}
+
+.wizardStep {
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.closeBtn,
+.ghostBtn {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.progressBar {
+  height: 10px;
+  background: #dbe4f0;
+  border-radius: 999px;
+  margin: 16px 4px;
+  overflow: hidden;
+}
+
+.progressBar span {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+  border-radius: 999px;
+  transition: .25s ease;
+}
+
+.wizardCard {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 18px;
+  box-shadow: 0 16px 45px rgba(15, 23, 42, 0.08);
+}
+
+.wizardCard h3 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.mutedText {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.wizardError {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 18px;
+  padding: 13px 15px;
+  margin: 12px 4px;
+  font-weight: 800;
+}
+
+.selectorTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.selectorTabs button {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  border-radius: 18px;
+  padding: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.selectorTabs button.active {
+  background: #eef4ff;
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.timeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.timeRow label,
+.fileGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.timeRow input,
+.fileGrid input,
+.wizardCard input,
+.wizardCard textarea {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 15px;
+  outline: none;
+  color: var(--text);
+}
+
+.calendarBox {
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.calendarTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  text-transform: capitalize;
+}
+
+.calendarTop button {
+  border: 0;
+  background: white;
+  border-radius: 14px;
+  width: 42px;
+  height: 38px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.weekHeader,
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.weekHeader span {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  padding-bottom: 8px;
+}
+
+.calendarDay,
+.calendarEmpty {
+  min-height: 54px;
+  border-radius: 16px;
+}
+
+.calendarDay {
+  border: 1px solid var(--border);
+  background: white;
+  font-weight: 950;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.calendarDay span {
+  position: relative;
+  z-index: 2;
+}
+
+.calendarDay:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.calendarDay.book-start {
+  background: linear-gradient(90deg, white 0 50%, #fee2e2 50% 100%);
+  border-color: #fecaca;
+}
+
+.calendarDay.book-end {
+  background: linear-gradient(90deg, #fee2e2 0 50%, white 50% 100%);
+  border-color: #fecaca;
+}
+
+.calendarDay.book-single {
+  background: linear-gradient(135deg, #fee2e2 0 50%, white 50% 100%);
+  border-color: #fecaca;
+}
+
+.calendarDay.book-middle {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.calendarDay.selected {
+  outline: 3px solid var(--blue);
+  background: #eef4ff;
+  color: var(--blue);
+}
+
+.calendarDay.inRange {
+  background: #eef4ff;
+  border-color: #bfdbfe;
+}
+
+.priceSummary,
+.recapGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.priceSummary div,
+.recapGrid div,
+.paymentNotice {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.priceSummary span,
+.recapGrid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 5px;
+}
+
+.priceSummary strong,
+.recapGrid strong {
+  font-size: 18px;
+}
+
+.reserveBtn.full {
+  width: 100%;
+  text-align: center;
+}
+
+.wizardActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.fileGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.paymentChoices {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.paymentChoices label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.paymentChoices label.active {
+  background: #eef4ff;
+  color: var(--blue);
+  border-color: var(--blue);
+}
+
+@media (max-width: 760px) {
+  .wizardOverlay { padding: 0; }
+  .wizardPage { border-radius: 0; min-height: 100vh; }
+  .wizardHeader { border-radius: 24px; }
+  .selectorTabs,
+  .timeRow,
+  .priceSummary,
+  .recapGrid,
+  .fileGrid {
+    grid-template-columns: 1fr;
+  }
+  .calendarDay,
+  .calendarEmpty {
+    min-height: 46px;
+    border-radius: 13px;
+  }
+}
