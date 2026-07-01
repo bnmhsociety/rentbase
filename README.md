@@ -1,28 +1,39 @@
-# RentBase — site public propre
+# RentBase — site client complet propre
 
-Version propre du tunnel client :
+Ce dossier remplace entièrement le site public RentBase.
 
-- Page agence : liste des véhicules
-- Page véhicule : photo, caractéristiques, prix 24h, caution, acompte, calendrier disponibilité
-- Page réservation : dates obligatoires, coordonnées, documents, mode de paiement souhaité, message optionnel
-- Page demande envoyée : récapitulatif client
-- Page finaliser : lien 72h après acceptation agence
+## Pages incluses
 
-## Variables Vercel nécessaires
+- `/${slug}` : page agence avec véhicules.
+- `/${slug}/vehicule/${vehicleId}` : page détail véhicule avec photo, caractéristiques, prix 24h, caution, acompte, calendrier et barre fixe contact/réserver.
+- `/${slug}/reservation/${vehicleId}` : tunnel de demande avec dates obligatoires, coordonnées, documents, mode de paiement souhaité et message optionnel.
+- `/${slug}/demande-envoyee/${requestId}` : page confirmation + récapitulatif.
+- `/finaliser/${token}` : page de finalisation après acceptation agence, lien 72h, acompte, caution et bouton paiement carte prêt.
 
-Obligatoires :
+## Variables Vercel obligatoires
 
-- NEXT_PUBLIC_SUPABASE_URL
-- NEXT_PUBLIC_SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` ou ta clé `sb_secret_...`
 
-Optionnelles pour envoyer l’email “Demande reçue” :
+## Variables Vercel optionnelles pour les emails
 
-- RESEND_API_KEY
-- MAIL_FROM
+- `RESEND_API_KEY`
+- `MAIL_FROM`
 
-Sans Resend, la demande s’envoie quand même dans Supabase, mais aucun email automatique n’est envoyé.
+Si Resend n'est pas configuré, les demandes s'envoient quand même dans Supabase mais aucun email automatique ne part.
 
-## Important
+## Upload GitHub
 
-Le paiement carte est préparé côté page finalisation, mais désactivé pour l’instant. Il sera activé plus tard avec Stripe Checkout.
+Glisse le contenu de ce dossier directement à la racine du dépôt GitHub. La racine doit afficher :
+
+- `app`
+- `components`
+- `lib`
+- `package.json`
+- `README.md`
+- `supabase_site_client_complet.sql`
+
+## SQL Supabase conseillé
+
+Lance le fichier `supabase_site_client_complet.sql` si certaines colonnes manquent dans `booking_requests`.
