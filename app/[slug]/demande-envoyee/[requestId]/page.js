@@ -20,7 +20,7 @@ export default async function RequestSuccessPage({ params }) {
         <div className="card">
           <div className="success-icon">✓</div>
           <h1>Demande envoyée</h1>
-          <p className="muted">L’agence a reçu votre demande et vous contactera très bientôt.</p>
+          <p className="muted">L’agence a reçu votre demande et vous contactera très bientôt. Un email de confirmation vous a aussi été envoyé avec le récapitulatif.</p>
 
           <div className="card" style={{ boxShadow: "none", marginTop: 18 }}>
             <h2>Récapitulatif de votre demande</h2>

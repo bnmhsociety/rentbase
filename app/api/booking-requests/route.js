@@ -49,20 +49,33 @@ async function sendReceivedEmail({ agency, vehicle, request }) {
   if (!request.email) return { skipped: true };
 
   const paymentLabel = request.payment_choice === "carte" ? "Carte bancaire / paiement en ligne" : "En agence / espèces";
+  const clientName = `${request.first_name || ""} ${request.last_name || ""}`.trim();
+
   const content = `
-    <div style="background:#0A49FF;color:white;border-radius:22px;padding:18px;font-size:25px;font-weight:900">Demande reçue</div>
-    <p style="font-size:16px;font-weight:700">Bonjour ${request.first_name || ""},</p>
-    <p>Votre demande a bien été transmise à <strong>${agency.website_name || agency.name}</strong>.</p>
-    <p>L’agence va examiner votre demande. Si elle accepte, vous recevrez un email avec le montant total et l’acompte à régler.</p>
-    ${summaryHtml([
-      ["Agence", agency.website_name || agency.name],
-      ["Véhicule", vehicle.name || "Véhicule"],
-      ["Départ", fmtDateTime(request.start_date, request.start_hour)],
-      ["Retour", fmtDateTime(request.end_date, request.end_hour)],
-      ["Mode de paiement souhaité", paymentLabel],
-      ["Prix 24h", eur(vehicle.price_per_day)],
-      ["Caution", eur(vehicle.deposit_amount)],
-    ])}
+    <div style="background:#0A49FF;color:white;border-radius:24px;padding:20px;font-size:26px;font-weight:900;text-align:center">Demande reçue</div>
+
+    <div style="background:#F8FAFC;border:1px solid #E8ECF4;border-radius:22px;padding:18px;margin-top:16px">
+      <p style="margin:0;font-size:18px;font-weight:900;color:#0F172A">Votre demande a bien été transmise à ${agency.website_name || agency.name}.</p>
+      <p style="margin:10px 0 0;color:#64748B;font-weight:700;line-height:1.5">Bonjour ${request.first_name || ""}, l’agence va examiner votre demande et vous recontactera très bientôt.</p>
+    </div>
+
+    <div style="margin-top:16px">
+      <h2 style="margin:0 0 12px;color:#0F172A;font-size:20px">Récapitulatif de votre demande</h2>
+      ${summaryHtml([
+        ["Agence", agency.website_name || agency.name],
+        ["Véhicule", vehicle.name || "Véhicule"],
+        ["Client", clientName || "—"],
+        ["Email", request.email || "—"],
+        ["Téléphone", request.phone || "—"],
+        ["Départ", fmtDateTime(request.start_date, request.start_hour)],
+        ["Retour", fmtDateTime(request.end_date, request.end_hour)],
+        ["Mode de paiement souhaité", paymentLabel],
+        ["Prix 24h", eur(vehicle.price_per_day)],
+        ["Caution", eur(vehicle.deposit_amount)],
+      ])}
+    </div>
+
+    <p style="margin-top:18px;color:#64748B;font-weight:700;line-height:1.55">Si l’agence accepte votre demande, vous recevrez un second email avec le montant total de la location, l’acompte à régler et le lien pour finaliser votre réservation.</p>
   `;
 
   return sendEmail({

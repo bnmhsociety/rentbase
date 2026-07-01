@@ -29,10 +29,6 @@ export default async function AgencyPage({ params }) {
         <section className="hero">
           <h1>{agency.website_name || agency.name}</h1>
           <p>{agency.website_intro || "Choisissez votre véhicule, vérifiez les disponibilités et envoyez votre demande de réservation en quelques minutes."}</p>
-          <div className="hero-actions">
-            <a className="btn btn-light" href="#vehicules">Voir les véhicules</a>
-            {(agency.website_phone || agency.phone) ? <a className="btn btn-dark" href={`tel:${agency.website_phone || agency.phone}`}>Contacter l’agence</a> : null}
-          </div>
         </section>
 
         <div className="section-head" id="vehicules">

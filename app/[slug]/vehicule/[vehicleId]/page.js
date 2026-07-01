@@ -35,15 +35,17 @@ export default async function VehicleDetailPage({ params }) {
           <div className="card">
             <span className="badge">Disponible à la demande</span>
             <h1 style={{ marginBottom: 4 }}>{safeText(vehicle.name, "Véhicule")}</h1>
-            <p className="muted">{vehicle.brand || ""} {vehicle.model || ""} {vehicle.year ? `· ${vehicle.year}` : ""}</p>
+            <p className="muted">
+              {vehicle.brand || ""} {vehicle.model || ""}
+              {vehicle.year ? ` · ${vehicle.year}` : ""}
+              {vehicle.power ? ` · ${vehicle.power} ch` : ""}
+            </p>
 
             <div className="specs">
               <div className="spec"><span>Prix 24h</span><strong>{eur(vehicle.price_per_day)}</strong></div>
               <div className="spec"><span>Caution</span><strong>{eur(vehicle.deposit_amount)}</strong></div>
-              <div className="spec"><span>Acompte indicatif</span><strong>{eur(vehicle.booking_deposit_amount ?? 0)}</strong></div>
-              <div className="spec"><span>Plaque</span><strong>{vehicle.plate || "—"}</strong></div>
-              <div className="spec"><span>Kilométrage</span><strong>{vehicle.mileage ? `${vehicle.mileage} km` : "—"}</strong></div>
-              <div className="spec"><span>Statut</span><strong>{vehicle.status || "Disponible"}</strong></div>
+              <div className="spec"><span>Année</span><strong>{vehicle.year || "—"}</strong></div>
+              <div className="spec"><span>Puissance</span><strong>{vehicle.power ? `${vehicle.power} ch` : "—"}</strong></div>
             </div>
 
             {vehicle.description ? <p className="muted" style={{ marginTop: 14 }}>{vehicle.description}</p> : null}

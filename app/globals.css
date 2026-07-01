@@ -132,3 +132,43 @@ button { border: 0; }
   .btn { padding: 13px 14px; }
   .price-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* Ajustements tunnel client propre */
+.hero .hero-actions { display: none; }
+.vehicle-card .vehicle-sub { min-height: 38px; }
+.vehicle-card .price-row { grid-template-columns: repeat(2, 1fr); }
+
+.date-picker { margin-top: 16px; background: #f8fafc; border: 1px solid var(--border); border-radius: 24px; padding: 14px; }
+.date-picker-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; text-transform: capitalize; }
+.month-btn { width: 42px; height: 42px; border-radius: 16px; background: #eef4ff; color: var(--blue); cursor: pointer; font-size: 26px; font-weight: 1000; }
+.calendar-select-grid .date-btn { cursor: pointer; transition: transform .15s ease, border-color .15s ease, background .15s ease; color: var(--text); }
+.calendar-select-grid .date-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--blue); }
+.calendar-select-grid .date-btn:disabled { cursor: not-allowed; opacity: .55; }
+.calendar-select-grid .day.past { opacity: .3; }
+.calendar-select-grid .day.selected-start,
+.calendar-select-grid .day.selected-end { background: var(--blue); color: white; border-color: var(--blue); }
+.calendar-select-grid .day.selected-range { background: #eef4ff; border-color: #bcd1ff; color: var(--blue); }
+.calendar-select-grid .day.selected-start::before,
+.calendar-select-grid .day.selected-end::before { display: none; }
+.legend i.blue { background: var(--blue); }
+.selected-dates-card { margin-top: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.selected-date-line { background: white; border: 1px solid var(--border); border-radius: 18px; padding: 12px; }
+.selected-date-line span { display: block; color: var(--muted); font-size: 12px; font-weight: 900; }
+.selected-date-line strong { display: block; margin-top: 4px; }
+
+.payment-card { background: linear-gradient(180deg, #eef4ff 0%, #ffffff 58%); border-color: #d8e5ff; }
+.payment-card .choice { min-height: 86px; display: flex; align-items: center; gap: 12px; background: white; }
+.payment-card .choice.active { background: #0a49ff; color: white; border-color: #0a49ff; box-shadow: 0 15px 30px rgba(10,73,255,.18); }
+.payment-card .choice .choice-icon { width: 42px; height: 42px; border-radius: 16px; background: #eef4ff; display: grid; place-items: center; font-size: 22px; flex: 0 0 auto; }
+.payment-card .choice.active .choice-icon { background: rgba(255,255,255,.18); }
+.payment-card .choice strong { display: block; margin: 0 0 3px; }
+.payment-card .choice em { display: block; font-style: normal; color: var(--muted); font-weight: 800; font-size: 13px; }
+.payment-card .choice.active em { color: rgba(255,255,255,.82); }
+
+.reservation-submit-inner.single-submit { display: block; }
+.submit-wide { width: 100%; min-height: 58px; font-size: 16px; }
+
+@media (max-width: 920px) {
+  .selected-dates-card { grid-template-columns: 1fr; }
+  .vehicle-card .price-row { grid-template-columns: repeat(2, 1fr); }
+}

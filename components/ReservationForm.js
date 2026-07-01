@@ -14,6 +14,12 @@ function toIso(date, hour) {
   return d.toISOString();
 }
 
+function dateKey(date) {
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return String(date || "").slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function rentalDays(startDate, endDate) {
   if (!startDate || !endDate) return 0;
   const start = new Date(startDate);
@@ -26,6 +32,117 @@ function rentalDays(startDate, endDate) {
 function overlap(startA, endA, startB, endB) {
   if (!startA || !endA || !startB || !endB) return false;
   return new Date(endA) > new Date(startB) && new Date(startA) < new Date(endB);
+}
+
+function addMonths(date, count) {
+  return new Date(date.getFullYear(), date.getMonth() + count, 1);
+}
+
+function monthCells(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const first = new Date(year, month, 1);
+  const firstDay = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day++) cells.push(new Date(year, month, day));
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  return cells;
+}
+
+function dayBusyClass(date, blocks) {
+  if (!date) return "";
+  const key = dateKey(date);
+  let busyStart = false;
+  let busyEnd = false;
+  let busyFull = false;
+
+  (blocks || []).forEach((block) => {
+    const start = dateKey(block.start_date);
+    const end = dateKey(block.end_date);
+    if (!start || !end) return;
+
+    if (key === start && key === end) {
+      busyStart = true;
+      busyEnd = true;
+      return;
+    }
+
+    if (key === start) busyStart = true;
+    if (key === end) busyEnd = true;
+    if (key > start && key < end) busyFull = true;
+  });
+
+  if (busyFull || (busyStart && busyEnd)) return "busy-both";
+  if (busyStart) return "busy-start";
+  if (busyEnd) return "busy-end";
+  return "";
+}
+
+function ReservationDateCalendar({ blocks, startDate, endDate, onPick }) {
+  const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const cells = useMemo(() => monthCells(month), [month]);
+  const today = dateKey(new Date());
+
+  function pick(date) {
+    if (!date) return;
+    const key = dateKey(date);
+    if (key < today) return;
+    const busy = dayBusyClass(date, blocks);
+    if (busy === "busy-both") return;
+    onPick(key);
+  }
+
+  return (
+    <div className="date-picker">
+      <div className="date-picker-top">
+        <button type="button" className="month-btn" onClick={() => setMonth(addMonths(month, -1))}>‹</button>
+        <strong>{month.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</strong>
+        <button type="button" className="month-btn" onClick={() => setMonth(addMonths(month, 1))}>›</button>
+      </div>
+
+      <div className="calendar-head">
+        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((d) => <div key={d}>{d}</div>)}
+      </div>
+
+      <div className="calendar-grid calendar-select-grid">
+        {cells.map((date, index) => {
+          const key = date ? dateKey(date) : "";
+          const busy = dayBusyClass(date, blocks);
+          const isPast = date && key < today;
+          const selectedStart = key && key === startDate;
+          const selectedEnd = key && key === endDate;
+          const inRange = key && startDate && endDate && key > startDate && key < endDate;
+          const disabled = !date || isPast || busy === "busy-both";
+
+          return (
+            <button
+              type="button"
+              key={`${key || 'empty'}-${index}`}
+              className={`day date-btn ${!date ? "empty" : ""} ${busy} ${selectedStart ? "selected-start" : ""} ${selectedEnd ? "selected-end" : ""} ${inRange ? "selected-range" : ""} ${isPast ? "past" : ""}`}
+              disabled={disabled}
+              onClick={() => pick(date)}
+            >
+              <span>{date ? date.getDate() : ""}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="legend">
+        <span><i /> Disponible</span>
+        <span><i className="red" /> Déjà réservé</span>
+        <span><i className="blue" /> Votre sélection</span>
+      </div>
+    </div>
+  );
 }
 
 export default function ReservationForm({ agency, vehicle, blocks }) {
@@ -50,6 +167,20 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
 
   function update(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function pickCalendarDate(key) {
+    if (!form.start_date || (form.start_date && form.end_date)) {
+      setForm((prev) => ({ ...prev, start_date: key, end_date: "" }));
+      return;
+    }
+
+    if (key <= form.start_date) {
+      setForm((prev) => ({ ...prev, start_date: key, end_date: "" }));
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, end_date: key }));
   }
 
   const startISO = useMemo(() => toIso(form.start_date, form.start_hour), [form.start_date, form.start_hour]);
@@ -121,16 +252,26 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
       <div style={{ display: "grid", gap: 14 }}>
         <div className="card">
           <h2>Choisissez vos dates</h2>
-          <p className="muted">Les dates et heures doivent être remplies avant de pouvoir continuer.</p>
+          <p className="muted">Sélectionnez une date de départ puis une date de retour dans le calendrier.</p>
+
+          <ReservationDateCalendar
+            blocks={blocks}
+            startDate={form.start_date}
+            endDate={form.end_date}
+            onPick={pickCalendarDate}
+          />
+
+          <div className="selected-dates-card">
+            <div className="selected-date-line"><span>Départ</span><strong>{form.start_date || "Choisir sur le calendrier"}</strong></div>
+            <div className="selected-date-line"><span>Retour</span><strong>{form.end_date || "Choisir sur le calendrier"}</strong></div>
+          </div>
 
           <div className="form-grid" style={{ marginTop: 14 }}>
-            <div className="field"><label>Date départ</label><input className="input" type="date" value={form.start_date} onChange={(e) => update("start_date", e.target.value)} required /></div>
             <div className="field"><label>Heure départ</label><input className="input" type="time" value={form.start_hour} onChange={(e) => update("start_hour", e.target.value)} required /></div>
-            <div className="field"><label>Date retour</label><input className="input" type="date" value={form.end_date} onChange={(e) => update("end_date", e.target.value)} required /></div>
             <div className="field"><label>Heure retour</label><input className="input" type="time" value={form.end_hour} onChange={(e) => update("end_hour", e.target.value)} required /></div>
           </div>
 
-          {!datesFilled ? <div className="notice wait">Remplissez les dates pour vérifier la disponibilité.</div> : null}
+          {!datesFilled ? <div className="notice wait">Choisissez les dates pour vérifier la disponibilité.</div> : null}
           {datesFilled && !dateOrderOk ? <div className="notice no">La date de retour doit être après la date de départ.</div> : null}
           {dateOrderOk && hasConflict ? <div className="notice no">Indisponible : une réservation existe déjà sur cette période.</div> : null}
           {datesAvailable ? <div className="notice ok">Disponible : vous pouvez continuer votre demande.</div> : null}
@@ -161,14 +302,16 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
           </div>
         </div>
 
-        <div className={`card ${!canUploadDocs ? "block-disabled" : ""}`}>
+        <div className={`card payment-card ${!canUploadDocs ? "block-disabled" : ""}`}>
           <h2>Comment souhaitez-vous payer ?</h2>
           <div className="payment-choice" style={{ marginTop: 14 }}>
             <button type="button" className={`choice ${form.payment_choice === "agence" ? "active" : ""}`} onClick={() => update("payment_choice", "agence")}>
-              <strong>En agence</strong><span>Espèces à régler sur place</span>
+              <span className="choice-icon">🏢</span>
+              <span><strong>En agence</strong><em>Espèces à régler sur place</em></span>
             </button>
             <button type="button" className={`choice ${form.payment_choice === "carte" ? "active" : ""}`} onClick={() => update("payment_choice", "carte")}>
-              <strong>Par carte</strong><span>Paiement en ligne sécurisé</span>
+              <span className="choice-icon">💳</span>
+              <span><strong>Par carte</strong><em>Paiement en ligne sécurisé</em></span>
             </button>
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>L’agence pourra vous proposer un autre mode de paiement si nécessaire.</p>
@@ -195,12 +338,8 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
       </aside>
 
       <div className="reservation-submit-bar">
-        <div className="container reservation-submit-inner">
-          <div>
-            <span>Demande</span>
-            <strong>{canSend ? "Prête à envoyer" : "Complétez les informations"}</strong>
-          </div>
-          <button className="btn btn-primary" disabled={!canSend || sending} type="submit">
+        <div className="container reservation-submit-inner single-submit">
+          <button className="btn btn-primary submit-wide" disabled={!canSend || sending} type="submit">
             {sending ? "Envoi..." : "Envoyer ma demande"}
           </button>
         </div>

@@ -17,13 +17,12 @@ export default function VehicleCard({ slug, vehicle }) {
         <div className="vehicle-title">{vehicle.name || "Véhicule"}</div>
         <div className="vehicle-sub">
           {vehicle.brand || ""} {vehicle.model || ""} {vehicle.year ? `· ${vehicle.year}` : ""}
-          {vehicle.plate ? ` · ${vehicle.plate}` : ""}
+          {vehicle.power ? ` · ${vehicle.power} ch` : ""}
         </div>
 
         <div className="price-row">
           <div className="price-pill"><span>24h</span><strong>{eur(vehicle.price_per_day)}</strong></div>
           <div className="price-pill"><span>Caution</span><strong>{eur(vehicle.deposit_amount)}</strong></div>
-          <div className="price-pill"><span>Acompte</span><strong>{eur(vehicle.booking_deposit_amount ?? 0)}</strong></div>
         </div>
 
         <span className="btn btn-primary" style={{ marginTop: "auto" }}>Voir le véhicule</span>
