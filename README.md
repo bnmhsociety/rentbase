@@ -1,7 +1,8 @@
-# RentBase Site Client - V2 images fix
+# RentBase site client V2 — correctif images proxy
 
-Correction affichage images Supabase Storage :
-- logo agence
-- photos véhicules
-- fallback URL publique si signedUrl échoue
-- tentative main_photo_path puis photo_url
+Cette version corrige les logos/photos qui ne s'affichent pas en utilisant une route interne `/api/media`.
+
+- Ne modifie pas Supabase.
+- Ne nécessite pas de rendre le bucket public.
+- Le site lit les images via Vercel côté serveur.
+
