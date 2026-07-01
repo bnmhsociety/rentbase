@@ -1,11 +1,12 @@
-# RentBase Site Client — version dynamique images corrigée
+# RentBase site client complet — correction envoi demande mobile
 
-Version complète du site client RentBase.
+Version corrigée pour l'erreur mobile :
 
-Corrections incluses :
-- pages dynamiques Next.js pour éviter les liens images expirés en cache ;
-- route `/api/media` sans cache pour afficher les logos et photos véhicules ;
-- fallback lien signé Supabase + fallback URL publique ;
-- tunnel client complet : page agence, détail véhicule, réservation, demande envoyée, finalisation.
+- suppression de la validation native navigateur qui provoquait « The string did not match the expected pattern »
+- email et téléphone passent en champs texte compatibles iPhone/Safari
+- bouton d'envoi en type bouton, sans soumission HTML native
+- fichiers envoyés avec nom sécurisé JPG/PNG/PDF pour éviter les noms iPhone incompatibles
+- API d'envoi de demande plus robuste : la demande est créée même si l'email automatique échoue
+- conservation des corrections images dynamiques Vercel/Supabase
 
-Après upload sur GitHub, attendre Vercel Ready puis faire CTRL+F5 sur le site.
+Dézippez puis uploadez le contenu du dossier à la racine du dépôt GitHub.

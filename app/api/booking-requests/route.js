@@ -185,9 +185,16 @@ export async function POST(req) {
     const request = inserted?.[0];
     if (!request) throw new Error("Demande non créée.");
 
-    const emailResult = await sendReceivedEmail({ agency: agency[0], vehicle, request });
-    if (emailResult.sent) {
-      await supabase.from("booking_requests").update({ received_email_sent_at: new Date().toISOString() }).eq("id", request.id);
+    try {
+      const emailResult = await sendReceivedEmail({ agency: agency[0], vehicle, request });
+      if (emailResult?.sent) {
+        await supabase.from("booking_requests").update({ received_email_sent_at: new Date().toISOString() }).eq("id", request.id);
+      }
+      if (emailResult?.error) {
+        console.warn("Email demande reçue non envoyé:", emailResult.error);
+      }
+    } catch (emailError) {
+      console.warn("Email demande reçue ignoré:", emailError);
     }
 
     return NextResponse.json({ success: true, id: request.id });
