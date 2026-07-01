@@ -41,7 +41,7 @@ export default async function AgencyPage({ params, searchParams }) {
   const demandeStatus = String(resolvedSearchParams?.demande || "");
 
   const agencies = await supabaseFetch(
-    `/rest/v1/agencies?website_slug=eq.${encodeURIComponent(slug)}&select=id,name,email,phone,address,city,website_name,website_slug,website_phone_prefix,website_phone,website_intro,website_whatsapp,website_snapchat,website_tiktok,website_instagram,website_profile_photo_path&limit=1`,
+    `/rest/v1/agencies?website_slug=eq.${encodeURIComponent(slug)}&select=id,name,email,phone,address,city,website_name,website_slug,website_phone_prefix,website_phone,website_intro,website_whatsapp,website_snapchat,website_tiktok,website_instagram,website_profile_photo_path,website_paypal_url,website_stripe_payment_link,website_bank_details&limit=1`,
     { service: true }
   );
 
@@ -49,7 +49,7 @@ export default async function AgencyPage({ params, searchParams }) {
   if (!agency) notFound();
 
   const vehicles = await supabaseFetch(
-    `/rest/v1/vehicles?agency_id=eq.${agency.id}&select=id,name,brand,model,category,status,price_per_day,deposit_amount,mileage,fuel,gearbox,seats,power,year,color,description,main_photo_path,photo_url&order=created_at.desc`,
+    `/rest/v1/vehicles?agency_id=eq.${agency.id}&select=id,name,brand,model,category,status,price_per_day,deposit_amount,booking_deposit_amount,mileage,fuel,gearbox,seats,power,year,color,description,main_photo_path,photo_url&order=created_at.desc`,
     { service: true }
   );
 
@@ -166,12 +166,13 @@ export default async function AgencyPage({ params, searchParams }) {
                   {vehicle.seats && <span>{vehicle.seats} places</span>}
                   {vehicle.power && <span>{vehicle.power}</span>}
                   {vehicle.deposit_amount ? <span>Caution {vehicle.deposit_amount}€</span> : null}
+                  <span>Acompte {vehicle.booking_deposit_amount ?? 100}€</span>
                 </div>
 
                 {vehicle.description && <p className="description">{vehicle.description}</p>}
 
                 <BookingWizard
-                  agency={{ id: agency.id }}
+                  agency={agency}
                   vehicle={vehicle}
                   slug={slug}
                   vehicleBookings={vehicle.bookings}

@@ -3,8 +3,6 @@
 import { useMemo, useState } from "react";
 import { submitPublicBookingRequest } from "./actions";
 
-const DEPOSIT_TO_BLOCK = 100;
-
 function pad(value) {
   return String(value).padStart(2, "0");
 }
@@ -29,6 +27,40 @@ function formatDay(key) {
 function formatMoney(value) {
   const number = Number(value || 0);
   return `${number.toLocaleString("fr-FR")}€`;
+}
+
+function paymentUrl(value) {
+  const clean = String(value || "").trim();
+  if (!clean) return "";
+  return clean.startsWith("http") ? clean : `https://${clean}`;
+}
+
+function vehicleAcompte(vehicle) {
+  const raw = vehicle?.booking_deposit_amount;
+  const number = Number(raw);
+  if (raw === null || raw === undefined || raw === "" || !Number.isFinite(number)) return 100;
+  return number;
+}
+
+function paypalUrlWithAmount(value, amount) {
+  const clean = paymentUrl(value);
+  if (!clean) return "";
+
+  try {
+    const url = new URL(clean);
+    const isPaypalMe = url.hostname.toLowerCase().includes("paypal.me");
+    if (!isPaypalMe) return clean;
+
+    const parts = url.pathname.split("/").filter(Boolean);
+    if (parts.length === 1) {
+      url.pathname = `/${parts[0]}/${amount}`;
+      return url.toString();
+    }
+
+    return clean;
+  } catch {
+    return clean;
+  }
 }
 
 function rentalDays(startDate, startHour, endDate, endHour) {
@@ -108,10 +140,18 @@ export default function BookingWizard({ agency, vehicle, slug, vehicleBookings =
     payment_method: "stripe",
   });
 
+  const depositToBlock = vehicleAcompte(vehicle);
   const days = rentalDays(startDate, startHour, endDate, endHour);
   const pricePerDay = Number(vehicle.price_per_day || 0);
   const totalAmount = days > 0 && pricePerDay > 0 ? days * pricePerDay : 0;
   const blocked = overlapsBooking(startDate, startHour, endDate, endHour, vehicleBookings);
+  const stripeLink = paymentUrl(agency?.website_stripe_payment_link);
+  const paypalLink = paypalUrlWithAmount(agency?.website_paypal_url, depositToBlock);
+  const bankDetails = String(agency?.website_bank_details || "").trim();
+  const selectedPaymentReady =
+    (info.payment_method === "stripe" && !!stripeLink) ||
+    (info.payment_method === "paypal" && !!paypalLink) ||
+    (info.payment_method === "virement" && !!bankDetails);
 
   const monthLabel = useMemo(() => {
     return monthDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
@@ -190,7 +230,7 @@ export default function BookingWizard({ agency, vehicle, slug, vehicleBookings =
         <input type="hidden" name="start_hour" value={startHour} />
         <input type="hidden" name="end_hour" value={endHour} />
         <input type="hidden" name="total_amount" value={totalAmount} />
-        <input type="hidden" name="deposit_amount" value={DEPOSIT_TO_BLOCK} />
+        <input type="hidden" name="deposit_amount" value={depositToBlock} />
         <input type="hidden" name="vehicle_deposit_amount" value={Number(vehicle.deposit_amount || 0)} />
         <input type="hidden" name="payment_method" value={info.payment_method} />
         <input type="hidden" name="message" value={info.message} />
@@ -306,7 +346,7 @@ export default function BookingWizard({ agency, vehicle, slug, vehicleBookings =
               <div><span>Départ</span><strong>{formatDay(startDate)} à {startHour}</strong></div>
               <div><span>Retour</span><strong>{formatDay(endDate)} à {endHour}</strong></div>
               <div><span>Prix location</span><strong>{totalAmount ? formatMoney(totalAmount) : "À confirmer"}</strong></div>
-              <div><span>Acompte obligatoire</span><strong>{formatMoney(DEPOSIT_TO_BLOCK)}</strong></div>
+              <div><span>Acompte obligatoire</span><strong>{formatMoney(depositToBlock)}</strong></div>
               <div><span>Caution</span><strong>{vehicle.deposit_amount ? formatMoney(vehicle.deposit_amount) : "À confirmer"}</strong></div>
             </div>
             <div className="wizardActions"><button type="button" className="ghostBtn" onClick={() => setStep(3)}>Retour</button><button type="button" className="reserveBtn" onClick={() => setStep(5)}>Passer au paiement</button></div>
@@ -316,23 +356,85 @@ export default function BookingWizard({ agency, vehicle, slug, vehicleBookings =
         {step === 5 && (
           <section className="wizardCard">
             <h3>Paiement de l’acompte</h3>
-            <p className="mutedText">Acompte obligatoire de <strong>{formatMoney(DEPOSIT_TO_BLOCK)}</strong> pour bloquer le véhicule. Le paiement réel Stripe/PayPal doit être connecté avec les comptes de l’agence.</p>
+            <p className="mutedText">
+              Acompte obligatoire de <strong>{formatMoney(depositToBlock)}</strong> pour bloquer le véhicule.
+              Choisis un moyen de paiement configuré par l’agence, réalise le paiement, puis confirme la demande.
+            </p>
 
             <div className="paymentChoices">
-              <label className={info.payment_method === "stripe" ? "active" : ""}><input type="radio" checked={info.payment_method === "stripe"} onChange={() => setInfo({ ...info, payment_method: "stripe" })} /> Carte bancaire / Stripe</label>
-              <label className={info.payment_method === "paypal" ? "active" : ""}><input type="radio" checked={info.payment_method === "paypal"} onChange={() => setInfo({ ...info, payment_method: "paypal" })} /> PayPal</label>
-              <label className={info.payment_method === "virement" ? "active" : ""}><input type="radio" checked={info.payment_method === "virement"} onChange={() => setInfo({ ...info, payment_method: "virement" })} /> Virement / paiement pro</label>
+              <label className={info.payment_method === "stripe" ? "active" : ""}>
+                <input type="radio" checked={info.payment_method === "stripe"} onChange={() => setInfo({ ...info, payment_method: "stripe" })} />
+                Carte bancaire / Stripe
+              </label>
+
+              <label className={info.payment_method === "paypal" ? "active" : ""}>
+                <input type="radio" checked={info.payment_method === "paypal"} onChange={() => setInfo({ ...info, payment_method: "paypal" })} />
+                PayPal
+              </label>
+
+              <label className={info.payment_method === "virement" ? "active" : ""}>
+                <input type="radio" checked={info.payment_method === "virement"} onChange={() => setInfo({ ...info, payment_method: "virement" })} />
+                Virement / compte pro
+              </label>
             </div>
 
-            <div className="paymentNotice">
-              Le bouton ci-dessous envoie la demande avec le statut <strong>Acompte à vérifier</strong>. Ensuite on connectera Stripe/PayPal pour encaisser et rembourser automatiquement.
+            {info.payment_method === "stripe" && (
+              <div className="paymentNotice">
+                {stripeLink ? (
+                  <>
+                    <strong>Étape 1 :</strong> payez l’acompte de {formatMoney(depositToBlock)} par carte bancaire.
+                    <a className="payExternalBtn" href={stripeLink} target="_blank" rel="noreferrer">Payer l’acompte par carte</a>
+                    <span>Après paiement, revenez ici puis cliquez sur “J’ai payé, envoyer la demande”.</span>
+                  </>
+                ) : (
+                  <span>Le paiement Stripe n’est pas encore configuré par l’agence.</span>
+                )}
+              </div>
+            )}
+
+            {info.payment_method === "paypal" && (
+              <div className="paymentNotice">
+                {paypalLink ? (
+                  <>
+                    <strong>Étape 1 :</strong> payez l’acompte de {formatMoney(depositToBlock)} via PayPal.
+                    <a className="payExternalBtn" href={paypalLink} target="_blank" rel="noreferrer">Payer l’acompte PayPal</a>
+                    <span>Après paiement, revenez ici puis cliquez sur “J’ai payé, envoyer la demande”.</span>
+                  </>
+                ) : (
+                  <span>Le paiement PayPal n’est pas encore configuré par l’agence.</span>
+                )}
+              </div>
+            )}
+
+            {info.payment_method === "virement" && (
+              <div className="paymentNotice">
+                {bankDetails ? (
+                  <>
+                    <strong>Infos virement acompte {formatMoney(depositToBlock)} :</strong>
+                    <pre className="bankDetails">{bankDetails}</pre>
+                    <span>Indiquez votre nom + véhicule en référence du virement.</span>
+                  </>
+                ) : (
+                  <span>Les informations de virement ne sont pas encore configurées par l’agence.</span>
+                )}
+              </div>
+            )}
+
+            {!selectedPaymentReady && (
+              <div className="wizardError">
+                Ce moyen de paiement n’est pas configuré. Choisissez un autre moyen ou contactez l’agence.
+              </div>
+            )}
+
+            {waLink && <a className="whatsappSmall" href={waLink} target="_blank" rel="noreferrer">Contacter l’agence si besoin</a>}
+
+            <div className="wizardActions">
+              <button type="button" className="ghostBtn" onClick={() => setStep(4)}>Retour</button>
+              <button type="submit" className="reserveBtn" disabled={!selectedPaymentReady}>J’ai payé, envoyer la demande</button>
             </div>
-
-            {waLink && <a className="whatsappSmall" href={waLink} target="_blank">Contacter l’agence si besoin</a>}
-
-            <div className="wizardActions"><button type="button" className="ghostBtn" onClick={() => setStep(4)}>Retour</button><button type="submit" className="reserveBtn">Confirmer la demande</button></div>
           </section>
         )}
+
       </form>
     </div>
   );
