@@ -1,32 +1,28 @@
-# RentBase Public Site
+# RentBase — site public propre
 
-Site web public pour les agences RentBase.
+Version propre du tunnel client :
 
-## Installation
+- Page agence : liste des véhicules
+- Page véhicule : photo, caractéristiques, prix 24h, caution, acompte, calendrier disponibilité
+- Page réservation : dates obligatoires, coordonnées, documents, mode de paiement souhaité, message optionnel
+- Page demande envoyée : récapitulatif client
+- Page finaliser : lien 72h après acceptation agence
 
-```bash
-npm install
-npm run dev
-```
+## Variables Vercel nécessaires
 
-## Variables d'environnement
+Obligatoires :
 
-Créer un fichier `.env.local` :
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://kbwjtstwjwwtcaroohid.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=TON_ANON_KEY_OU_PUBLISHABLE_KEY
-SUPABASE_SERVICE_ROLE_KEY=TA_SERVICE_ROLE_KEY_SEULEMENT_COTE_SERVER
-```
+Optionnelles pour envoyer l’email “Demande reçue” :
 
-Important : ne mets jamais `SUPABASE_SERVICE_ROLE_KEY` dans Snack Expo ou dans un code public côté client.
+- RESEND_API_KEY
+- MAIL_FROM
 
-## URL de test
+Sans Resend, la demande s’envoie quand même dans Supabase, mais aucun email automatique n’est envoyé.
 
-Après lancement :
+## Important
 
-```txt
-http://localhost:3000/ton-slug-agence
-```
-
-Le slug doit être le même que celui enregistré dans l'app RentBase : `website_slug`.
+Le paiement carte est préparé côté page finalisation, mais désactivé pour l’instant. Il sera activé plus tard avec Stripe Checkout.

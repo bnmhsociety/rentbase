@@ -1,203 +1,54 @@
-import { notFound } from "next/navigation";
-import BookingWizard from "./BookingWizard";
-import { signedPhotoUrl, supabaseFetch } from "../../lib/supabase";
+import Header from "../../components/Header";
+import VehicleCard from "../../components/VehicleCard";
+import { getAgencyBySlug, getVehiclesForAgency } from "../../lib/data";
 
-function money(value) {
-  const number = Number(value || 0);
-  if (!Number.isFinite(number) || number <= 0) return "Prix sur demande";
-  return `${number.toLocaleString("fr-FR")}€ / jour`;
-}
+export const dynamic = "force-dynamic";
 
-function phoneText(agency) {
-  const prefix = agency.website_phone_prefix || "";
-  const phone = agency.website_phone || agency.phone || "";
-  return `${prefix} ${phone}`.trim();
-}
+export default async function AgencyPage({ params }) {
+  const agency = await getAgencyBySlug(params.slug);
 
-function whatsappLink(agency) {
-  const directLink = agency.website_whatsapp || "";
-  if (directLink.startsWith("http")) return directLink;
+  if (!agency) {
+    return (
+      <main className="container" style={{ padding: 30 }}>
+        <div className="card">
+          <h1>Agence introuvable</h1>
+          <p className="muted">Le lien de cette agence n’existe pas ou n’est pas encore activé.</p>
+        </div>
+      </main>
+    );
+  }
 
-  const phone = `${agency.website_phone_prefix || ""}${agency.website_phone || agency.phone || ""}`.replace(/[^0-9]/g, "");
-  if (!phone) return null;
-
-  return `https://wa.me/${phone}`;
-}
-
-function socialUrl(value) {
-  if (!value) return null;
-  if (value.startsWith("http")) return value;
-  return `https://${value}`;
-}
-
-function activeBooking(booking) {
-  return booking.status !== "Annulée" && booking.status !== "Terminée";
-}
-
-export default async function AgencyPage({ params, searchParams }) {
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
-  const slug = String(resolvedParams?.slug || "").toLowerCase();
-  const demandeStatus = String(resolvedSearchParams?.demande || "");
-
-  const agencies = await supabaseFetch(
-    `/rest/v1/agencies?website_slug=eq.${encodeURIComponent(slug)}&select=id,name,email,phone,address,city,website_name,website_slug,website_phone_prefix,website_phone,website_intro,website_whatsapp,website_snapchat,website_tiktok,website_instagram,website_profile_photo_path,website_paypal_url,website_stripe_payment_link,website_bank_details&limit=1`,
-    { service: true }
-  );
-
-  const agency = agencies?.[0];
-  if (!agency) notFound();
-
-  const vehicles = await supabaseFetch(
-    `/rest/v1/vehicles?agency_id=eq.${agency.id}&select=id,name,brand,model,category,status,price_per_day,deposit_amount,booking_deposit_amount,mileage,fuel,gearbox,seats,power,year,color,description,main_photo_path,photo_url&order=created_at.desc`,
-    { service: true }
-  );
-
-  const bookings = await supabaseFetch(
-    `/rest/v1/bookings?agency_id=eq.${agency.id}&select=id,vehicle_id,start_date,end_date,status&order=start_date.asc`,
-    { service: true }
-  );
-
-  const activeBookings = (bookings || []).filter(activeBooking);
-
-  const profilePhoto = await signedPhotoUrl(agency.website_profile_photo_path);
-
-  const vehiclesWithPhotos = await Promise.all(
-    (vehicles || [])
-      .filter((vehicle) => vehicle.status !== "Maintenance")
-      .map(async (vehicle) => ({
-        ...vehicle,
-        image: await signedPhotoUrl(vehicle.main_photo_path || vehicle.photo_url),
-        bookings: activeBookings.filter((booking) => booking.vehicle_id === vehicle.id),
-      }))
-  );
-
-  const displayName = agency.website_name || agency.name || "Agence de location";
-  const intro = agency.website_intro || "Découvrez nos véhicules disponibles et contactez-nous pour réserver.";
-  const contactPhone = phoneText(agency);
-  const waLink = whatsappLink(agency);
+  const allVehicles = await getVehiclesForAgency(agency.id);
+  const vehicles = allVehicles.filter((v) => String(v.status || "Disponible") !== "Maintenance");
 
   return (
-    <main className="page">
-      <section className="hero">
-        <div className="heroTop">
-          <div className="agencyIdentity">
-            <div className="logoBox">
-              {profilePhoto ? (
-                <img src={profilePhoto} alt={displayName} />
-              ) : (
-                <span>{displayName.slice(0, 1).toUpperCase()}</span>
-              )}
-            </div>
+    <div className="page">
+      <Header agency={agency} />
+      <main className="container">
+        <section className="hero">
+          <h1>{agency.website_name || agency.name}</h1>
+          <p>{agency.website_intro || "Choisissez votre véhicule, vérifiez les disponibilités et envoyez votre demande de réservation en quelques minutes."}</p>
+          <div className="hero-actions">
+            <a className="btn btn-light" href="#vehicules">Voir les véhicules</a>
+            {agency.phone ? <a className="btn btn-dark" href={`tel:${agency.phone}`}>Contacter l’agence</a> : null}
+          </div>
+        </section>
 
-            <div>
-              <p className="eyebrow">Location automobile</p>
-              <h1>{displayName}</h1>
-            </div>
+        <div className="section-head" id="vehicules">
+          <div>
+            <h2>Véhicules disponibles</h2>
+            <p>{vehicles.length} véhicule(s) présenté(s)</p>
           </div>
         </div>
 
-        <p className="intro">{intro}</p>
-
-        <div className="heroActions">
-          {waLink && (
-            <a className="primaryBtn" href={waLink} target="_blank">
-              Réserver sur WhatsApp
-            </a>
-          )}
-
-          {contactPhone && <a className="secondaryBtn" href={`tel:${contactPhone.replace(/\s/g, "")}`}>{contactPhone}</a>}
-        </div>
-
-        <div className="socials">
-          {socialUrl(agency.website_instagram) && <a href={socialUrl(agency.website_instagram)} target="_blank">Instagram</a>}
-          {socialUrl(agency.website_snapchat) && <a href={socialUrl(agency.website_snapchat)} target="_blank">Snapchat</a>}
-          {socialUrl(agency.website_tiktok) && <a href={socialUrl(agency.website_tiktok)} target="_blank">TikTok</a>}
-        </div>
-      </section>
-
-      {demandeStatus === "envoyee" && (
-        <section className="successBox">
-          <strong>Demande envoyée.</strong>
-          <p>L’agence a bien reçu votre demande de réservation.</p>
-        </section>
-      )}
-
-      {demandeStatus === "erreur" && (
-        <section className="errorBox">
-          <strong>Demande non envoyée.</strong>
-          <p>Merci de remplir les informations obligatoires.</p>
-        </section>
-      )}
-
-      <section className="sectionTitle">
-        <h2>Véhicules disponibles</h2>
-        <p>{vehiclesWithPhotos.length} véhicule(s) visible(s)</p>
-      </section>
-
-      {vehiclesWithPhotos.length === 0 ? (
-        <section className="emptyBox">
-          <h3>Aucun véhicule disponible</h3>
-          <p>Contactez l’agence pour connaître les prochaines disponibilités.</p>
-        </section>
-      ) : (
-        <section className="vehicleGrid">
-          {vehiclesWithPhotos.map((vehicle) => (
-            <article className="vehicleCard" key={vehicle.id}>
-              <div className="vehicleImage">
-                {vehicle.image ? (
-                  <img src={vehicle.image} alt={vehicle.name || "Véhicule"} />
-                ) : (
-                  <div className="imagePlaceholder">RENTBASE</div>
-                )}
-              </div>
-
-              <div className="vehicleContent">
-                <div className="vehicleHead">
-                  <div>
-                    <h3>{vehicle.name || `${vehicle.brand || ""} ${vehicle.model || ""}`}</h3>
-                    <p>{[vehicle.category, vehicle.year, vehicle.gearbox].filter(Boolean).join(" · ")}</p>
-                  </div>
-                  <strong>{money(vehicle.price_per_day)}</strong>
-                </div>
-
-                <div className="tags">
-                  {vehicle.fuel && <span>{vehicle.fuel}</span>}
-                  {vehicle.seats && <span>{vehicle.seats} places</span>}
-                  {vehicle.power && <span>{vehicle.power}</span>}
-                  {vehicle.deposit_amount ? <span>Caution {vehicle.deposit_amount}€</span> : null}
-                  <span>Acompte {vehicle.booking_deposit_amount ?? 100}€</span>
-                </div>
-
-                {vehicle.description && <p className="description">{vehicle.description}</p>}
-
-                <BookingWizard
-                  agency={agency}
-                  vehicle={vehicle}
-                  slug={slug}
-                  vehicleBookings={vehicle.bookings}
-                  waLink={waLink}
-                />
-
-                {waLink && (
-                  <a
-                    className="whatsappSmall"
-                    href={`${waLink}?text=${encodeURIComponent(`Bonjour, je souhaite réserver : ${vehicle.name || vehicle.brand || "un véhicule"}`)}`}
-                    target="_blank"
-                  >
-                    Ou contacter sur WhatsApp
-                  </a>
-                )}
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
-
-      <footer className="footer">
-        <strong>RENT<span>BASE</span></strong>
-        <p>Page générée automatiquement pour {displayName}</p>
-      </footer>
-    </main>
+        {vehicles.length === 0 ? (
+          <div className="card"><p className="muted">Aucun véhicule disponible pour le moment.</p></div>
+        ) : (
+          <div className="grid">
+            {vehicles.map((vehicle) => <VehicleCard key={vehicle.id} slug={params.slug} vehicle={vehicle} />)}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
