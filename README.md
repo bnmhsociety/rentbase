@@ -1,12 +1,14 @@
-# RentBase site client complet — correction envoi demande mobile
+# RentBase site client complet — correctif iPhone FormData
 
-Version corrigée pour l'erreur mobile :
+Version corrigée après erreur mobile : « The string did not match the expected pattern ».
 
-- suppression de la validation native navigateur qui provoquait « The string did not match the expected pattern »
-- email et téléphone passent en champs texte compatibles iPhone/Safari
-- bouton d'envoi en type bouton, sans soumission HTML native
-- fichiers envoyés avec nom sécurisé JPG/PNG/PDF pour éviter les noms iPhone incompatibles
-- API d'envoi de demande plus robuste : la demande est créée même si l'email automatique échoue
-- conservation des corrections images dynamiques Vercel/Supabase
+Corrections incluses :
+- Suppression du 3e argument `filename` dans FormData.append, qui peut faire planter iPhone/Safari.
+- URL API absolue côté navigateur.
+- Envoi sans option cache sur POST multipart.
+- Sécurisation du content-type fichier côté serveur.
+- Sécurisation du chemin Storage côté serveur.
+- Messages d’erreur français plus clairs.
+- Conservation des corrections images dynamiques.
 
 Dézippez puis uploadez le contenu du dossier à la racine du dépôt GitHub.

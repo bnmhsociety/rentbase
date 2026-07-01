@@ -9,15 +9,31 @@ import { emailShell, sendEmail, summaryHtml } from "../../../lib/mail";
 
 export const runtime = "nodejs";
 
+function safeContentType(type) {
+  const value = String(type || "").trim();
+  return /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(value) ? value : "application/octet-stream";
+}
+
+function safeStoragePath(path) {
+  return String(path || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._\/-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/\/+/g, "/")
+    .replace(/^\/+/, "");
+}
+
 async function uploadFile(bucket, path, file) {
   if (!file || typeof file === "string" || file.size === 0) return null;
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { error } = await supabase.storage.from(bucket).upload(path, buffer, {
-    contentType: file.type || "application/octet-stream",
+  const finalPath = safeStoragePath(path);
+  const { error } = await supabase.storage.from(bucket).upload(finalPath, buffer, {
+    contentType: safeContentType(file.type),
     upsert: true,
   });
   if (error) throw error;
-  return path;
+  return finalPath;
 }
 
 async function assertAvailable({ agencyId, vehicleId, startISO, endISO }) {
@@ -200,6 +216,11 @@ export async function POST(req) {
     return NextResponse.json({ success: true, id: request.id });
   } catch (error) {
     console.error("Erreur API booking-requests:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    const raw = String(error?.message || error || "Erreur pendant l’envoi.");
+    const low = raw.toLowerCase();
+    const message = low.includes("expected pattern") || low.includes("match the expected") || low.includes("pattern")
+      ? "Erreur de format pendant l’envoi des documents. Réessayez avec des photos JPG/PNG/PDF simples."
+      : raw;
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }

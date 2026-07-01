@@ -304,9 +304,16 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
       fd.append("rental_days", String(days));
       fd.append("vehicle_deposit_amount", String(vehicle.deposit_amount || 0));
       fd.append("deposit_amount", String(vehicle.booking_deposit_amount || 0));
-      Object.entries(files).forEach(([key, file]) => fd.append(key, file, safeUploadFileName(file, key)));
 
-      const res = await fetch("/api/booking-requests", { method: "POST", body: fd, cache: "no-store" });
+      // iPhone/Safari peut planter avec le 3e argument `filename` de FormData.append().
+      // On laisse donc le navigateur envoyer le fichier naturellement, puis le serveur sécurise le nom.
+      Object.entries(files).forEach(([key, file]) => fd.append(key, file));
+
+      const apiUrl = typeof window !== "undefined"
+        ? new URL("/api/booking-requests", window.location.origin).toString()
+        : "/api/booking-requests";
+
+      const res = await fetch(apiUrl, { method: "POST", body: fd });
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
@@ -318,8 +325,9 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
       window.location.assign(`/${encodeURIComponent(slug)}/demande-envoyee/${encodeURIComponent(String(data.id))}`);
     } catch (err) {
       const rawMessage = String(err?.message || err || "Erreur pendant l’envoi.");
-      const friendlyMessage = rawMessage.toLowerCase().includes("expected pattern") || rawMessage.toLowerCase().includes("match the expected")
-        ? "Erreur pendant l’envoi des documents. Réessayez avec des photos simples prises depuis votre galerie, ou choisissez des fichiers JPG/PNG/PDF."
+      const low = rawMessage.toLowerCase();
+      const friendlyMessage = low.includes("expected pattern") || low.includes("match the expected") || low.includes("pattern")
+        ? "Erreur mobile corrigée : le navigateur a refusé un format de fichier ou de formulaire. Rechargez la page après le nouveau déploiement, puis réessayez avec des photos depuis la galerie."
         : rawMessage;
       setMessage(friendlyMessage);
       setSending(false);
