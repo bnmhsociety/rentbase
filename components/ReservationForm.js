@@ -285,7 +285,7 @@ async function compressImageForUpload(file, fallbackName) {
 
     img.onload = () => {
       try {
-        const maxSize = 1100;
+        const maxSize = 900;
         const width = img.naturalWidth || img.width || 1100;
         const height = img.naturalHeight || img.height || 1100;
         const scale = Math.min(1, maxSize / Math.max(width, height));
@@ -310,7 +310,7 @@ async function compressImageForUpload(file, fallbackName) {
           } catch {
             resolve(blob);
           }
-        }, "image/jpeg", 0.68);
+        }, "image/jpeg", 0.58);
       } catch {
         URL.revokeObjectURL(objectUrl);
         resolve(file);
@@ -371,10 +371,11 @@ async function compressImageForUpload(file, fallbackName) {
       fd.append("vehicle_deposit_amount", String(vehicle.deposit_amount || 0));
       fd.append("deposit_amount", String(vehicle.booking_deposit_amount || 0));
 
-      const preparedFiles = {};
-      for (const [key, file] of Object.entries(files)) {
-        preparedFiles[key] = await compressImageForUpload(file, key);
-      }
+      setMessage("Préparation rapide des documents...");
+      const preparedEntries = await Promise.all(
+        Object.entries(files).map(async ([key, file]) => [key, await compressImageForUpload(file, key)])
+      );
+      const preparedFiles = Object.fromEntries(preparedEntries);
 
       const totalUploadSize = Object.values(preparedFiles).reduce((sum, file) => sum + Number(file?.size || 0), 0);
       if (totalUploadSize > 4200000) {
@@ -388,6 +389,7 @@ async function compressImageForUpload(file, fallbackName) {
         ? new URL("/api/booking-requests", window.location.origin).toString()
         : "/api/booking-requests";
 
+      setMessage("Envoi sécurisé de la demande...");
       const res = await fetch(apiUrl, { method: "POST", body: fd });
       const responseText = await res.text().catch(() => "");
       let data = null;
@@ -505,13 +507,13 @@ async function compressImageForUpload(file, fallbackName) {
           <div className="summary-line"><span>Acompte</span><strong>À définir par l’agence</strong></div>
           <div className="summary-line"><span>Caution</span><strong>{eur(vehicle.deposit_amount)}</strong></div>
         </div>
-        {message ? <div className="notice no">{message}</div> : null}
+        {message ? <div className={`notice ${sending ? "wait" : "no"}`}>{message}</div> : null}
       </aside>
 
       <div className="reservation-submit-bar">
         <div className="container reservation-submit-inner single-submit">
           <button className="btn btn-primary submit-wide" disabled={!canSend || sending} type="button" onClick={submit}>
-            {sending ? "Envoi..." : "Envoyer ma demande"}
+            {sending ? "Envoi en cours..." : "Envoyer ma demande"}
           </button>
         </div>
       </div>

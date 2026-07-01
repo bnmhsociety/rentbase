@@ -151,11 +151,13 @@ export async function POST(req) {
     const idBackFile = form.get("id_back");
     const addressProofFile = form.get("address_proof");
 
-    const licenseFront = await uploadFile("rentbase-documents", `${safeBase}/permis-recto-${sanitizeFileName(licenseFrontFile?.name)}`, licenseFrontFile);
-    const licenseBack = await uploadFile("rentbase-documents", `${safeBase}/permis-verso-${sanitizeFileName(licenseBackFile?.name)}`, licenseBackFile);
-    const idFront = await uploadFile("rentbase-documents", `${safeBase}/id-recto-${sanitizeFileName(idFrontFile?.name)}`, idFrontFile);
-    const idBack = await uploadFile("rentbase-documents", `${safeBase}/id-verso-${sanitizeFileName(idBackFile?.name)}`, idBackFile);
-    const addressProof = await uploadFile("rentbase-documents", `${safeBase}/justificatif-${sanitizeFileName(addressProofFile?.name)}`, addressProofFile);
+    const [licenseFront, licenseBack, idFront, idBack, addressProof] = await Promise.all([
+      uploadFile("rentbase-documents", `${safeBase}/permis-recto-${sanitizeFileName(licenseFrontFile?.name)}`, licenseFrontFile),
+      uploadFile("rentbase-documents", `${safeBase}/permis-verso-${sanitizeFileName(licenseBackFile?.name)}`, licenseBackFile),
+      uploadFile("rentbase-documents", `${safeBase}/id-recto-${sanitizeFileName(idFrontFile?.name)}`, idFrontFile),
+      uploadFile("rentbase-documents", `${safeBase}/id-verso-${sanitizeFileName(idBackFile?.name)}`, idBackFile),
+      uploadFile("rentbase-documents", `${safeBase}/justificatif-${sanitizeFileName(addressProofFile?.name)}`, addressProofFile),
+    ]);
 
     if (!licenseFront || !licenseBack || !idFront || !idBack || !addressProof) {
       throw new Error("Tous les documents sont obligatoires.");
@@ -201,19 +203,29 @@ export async function POST(req) {
     const request = inserted?.[0];
     if (!request) throw new Error("Demande non créée.");
 
+    let emailStatus = { skipped: true, reason: "non tenté" };
     try {
-      const emailResult = await sendReceivedEmail({ agency: agency[0], vehicle, request });
-      if (emailResult?.sent) {
+      emailStatus = await Promise.race([
+        sendReceivedEmail({ agency: agency[0], vehicle, request }),
+        new Promise((resolve) => setTimeout(() => resolve({ timeout: true, reason: "email trop long" }), 4500)),
+      ]);
+      if (emailStatus?.sent) {
         await supabase.from("booking_requests").update({ received_email_sent_at: new Date().toISOString() }).eq("id", request.id);
-      }
-      if (emailResult?.error) {
-        console.warn("Email demande reçue non envoyé:", emailResult.error);
+      } else {
+        console.warn("Email demande reçue non envoyé:", emailStatus?.reason || emailStatus?.error || "configuration manquante");
       }
     } catch (emailError) {
+      emailStatus = { sent: false, error: String(emailError?.message || emailError) };
       console.warn("Email demande reçue ignoré:", emailError);
     }
 
-    return NextResponse.json({ success: true, id: request.id });
+    return NextResponse.json({
+      success: true,
+      id: request.id,
+      email_sent: !!emailStatus?.sent,
+      email_skipped: !!emailStatus?.skipped,
+      email_timeout: !!emailStatus?.timeout,
+    });
   } catch (error) {
     console.error("Erreur API booking-requests:", error);
     const raw = String(error?.message || error || "Erreur pendant l’envoi.");
