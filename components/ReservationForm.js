@@ -9,7 +9,9 @@ function eur(value) {
 
 function toIso(date, hour) {
   if (!date) return null;
-  return new Date(`${date}T${hour || "09:00"}:00`).toISOString();
+  const d = new Date(`${date}T${hour || "09:00"}:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
 }
 
 function rentalDays(startDate, endDate) {
@@ -27,7 +29,7 @@ function overlap(startA, endA, startB, endB) {
 }
 
 export default function ReservationForm({ agency, vehicle, blocks }) {
-  const [stepMessage, setStepMessage] = useState("");
+  const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [docsReady, setDocsReady] = useState(false);
   const [form, setForm] = useState({
@@ -42,7 +44,7 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
     address: "",
     zip_code: "",
     city: "",
-    payment_choice: "agence",
+    payment_choice: "",
     request_message: "",
   });
 
@@ -54,12 +56,15 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
   const endISO = useMemo(() => toIso(form.end_date, form.end_hour), [form.end_date, form.end_hour]);
   const days = useMemo(() => rentalDays(startISO, endISO), [startISO, endISO]);
   const total = days * Number(vehicle.price_per_day || 0);
+
   const datesFilled = !!form.start_date && !!form.end_date && !!form.start_hour && !!form.end_hour;
-  const dateOrderOk = datesFilled && new Date(endISO) > new Date(startISO);
+  const dateOrderOk = datesFilled && startISO && endISO && new Date(endISO) > new Date(startISO);
   const hasConflict = dateOrderOk && (blocks || []).some((block) => overlap(startISO, endISO, block.start_date, block.end_date));
   const datesAvailable = dateOrderOk && !hasConflict;
 
-  const identityFilled = [form.first_name, form.last_name, form.email, form.phone, form.address, form.zip_code, form.city].every((v) => String(v || "").trim());
+  const identityFilled = [form.first_name, form.last_name, form.email, form.phone, form.address, form.zip_code, form.city]
+    .every((v) => String(v || "").trim());
+
   const canUploadDocs = datesAvailable && identityFilled;
 
   function getFile(id) {
@@ -68,13 +73,7 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
 
   function refreshDocsReady() {
     setTimeout(() => {
-      const ok = [
-        "license_front",
-        "license_back",
-        "id_front",
-        "id_back",
-        "address_proof",
-      ].every((id) => !!getFile(id));
+      const ok = ["license_front", "license_back", "id_front", "id_back", "address_proof"].every((id) => !!getFile(id));
       setDocsReady(ok);
     }, 0);
   }
@@ -83,9 +82,10 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
 
   async function submit(e) {
     e.preventDefault();
-    if (!canSend) return;
+    if (!canSend || sending) return;
+
     setSending(true);
-    setStepMessage("");
+    setMessage("");
 
     try {
       const fd = new FormData();
@@ -104,20 +104,25 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
 
       const res = await fetch("/api/booking-requests", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok || !data?.success) throw new Error(data?.error || "Erreur envoi demande");
+
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || "Erreur envoi demande");
+      }
+
       window.location.href = `/${agency.website_slug}/demande-envoyee/${data.id}`;
     } catch (err) {
-      setStepMessage(err.message);
+      setMessage(err.message);
       setSending(false);
     }
   }
 
   return (
-    <form onSubmit={submit} className="form-layout">
+    <form id="reservation-form" onSubmit={submit} className="form-layout">
       <div style={{ display: "grid", gap: 14 }}>
         <div className="card">
           <h2>Choisissez vos dates</h2>
-          <p className="muted">Les dates et heures doivent être remplies avant de continuer.</p>
+          <p className="muted">Les dates et heures doivent être remplies avant de pouvoir continuer.</p>
+
           <div className="form-grid" style={{ marginTop: 14 }}>
             <div className="field"><label>Date départ</label><input className="input" type="date" value={form.start_date} onChange={(e) => update("start_date", e.target.value)} required /></div>
             <div className="field"><label>Heure départ</label><input className="input" type="time" value={form.start_hour} onChange={(e) => update("start_hour", e.target.value)} required /></div>
@@ -125,6 +130,7 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
             <div className="field"><label>Heure retour</label><input className="input" type="time" value={form.end_hour} onChange={(e) => update("end_hour", e.target.value)} required /></div>
           </div>
 
+          {!datesFilled ? <div className="notice wait">Remplissez les dates pour vérifier la disponibilité.</div> : null}
           {datesFilled && !dateOrderOk ? <div className="notice no">La date de retour doit être après la date de départ.</div> : null}
           {dateOrderOk && hasConflict ? <div className="notice no">Indisponible : une réservation existe déjà sur cette période.</div> : null}
           {datesAvailable ? <div className="notice ok">Disponible : vous pouvez continuer votre demande.</div> : null}
@@ -145,7 +151,7 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
 
         <div className={`card ${!canUploadDocs ? "block-disabled" : ""}`}>
           <h2>Documents</h2>
-          <p className="muted">Ajoutez les photos ou fichiers demandés pour que l’agence puisse examiner la demande.</p>
+          <p className="muted">Ajoutez les photos ou fichiers demandés.</p>
           <div className="form-grid" style={{ marginTop: 14 }}>
             <div className="field"><label>Permis recto</label><input className="file" id="license_front" type="file" accept="image/*,.pdf" onChange={refreshDocsReady} required={canUploadDocs} /></div>
             <div className="field"><label>Permis verso</label><input className="file" id="license_back" type="file" accept="image/*,.pdf" onChange={refreshDocsReady} required={canUploadDocs} /></div>
@@ -158,16 +164,14 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
         <div className={`card ${!canUploadDocs ? "block-disabled" : ""}`}>
           <h2>Comment souhaitez-vous payer ?</h2>
           <div className="payment-choice" style={{ marginTop: 14 }}>
-            <div className={`choice ${form.payment_choice === "agence" ? "active" : ""}`} onClick={() => update("payment_choice", "agence")}>
+            <button type="button" className={`choice ${form.payment_choice === "agence" ? "active" : ""}`} onClick={() => update("payment_choice", "agence")}>
               <strong>En agence</strong><span>Espèces à régler sur place</span>
-            </div>
-            <div className={`choice ${form.payment_choice === "carte" ? "active" : ""}`} onClick={() => update("payment_choice", "carte")}>
+            </button>
+            <button type="button" className={`choice ${form.payment_choice === "carte" ? "active" : ""}`} onClick={() => update("payment_choice", "carte")}>
               <strong>Par carte</strong><span>Paiement en ligne sécurisé</span>
-            </div>
+            </button>
           </div>
-          <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-            L’agence pourra vous proposer un autre mode de paiement si nécessaire.
-          </p>
+          <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>L’agence pourra vous proposer un autre mode de paiement si nécessaire.</p>
         </div>
 
         <div className={`card ${!canUploadDocs ? "block-disabled" : ""}`}>
@@ -176,7 +180,7 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
         </div>
       </div>
 
-      <aside className="card" style={{ position: "sticky", top: 96 }}>
+      <aside className="card recap-card">
         <h2>Récapitulatif</h2>
         <div className="summary-list">
           <div className="summary-line"><span>Véhicule</span><strong>{vehicle.name}</strong></div>
@@ -187,11 +191,20 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
           <div className="summary-line"><span>Acompte</span><strong>À définir par l’agence</strong></div>
           <div className="summary-line"><span>Caution</span><strong>{eur(vehicle.deposit_amount)}</strong></div>
         </div>
-        {stepMessage ? <div className="notice no">{stepMessage}</div> : null}
-        <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={!canSend || sending} type="submit">
-          {sending ? "Envoi en cours..." : "Envoyer ma demande"}
-        </button>
+        {message ? <div className="notice no">{message}</div> : null}
       </aside>
+
+      <div className="reservation-submit-bar">
+        <div className="container reservation-submit-inner">
+          <div>
+            <span>Demande</span>
+            <strong>{canSend ? "Prête à envoyer" : "Complétez les informations"}</strong>
+          </div>
+          <button className="btn btn-primary" disabled={!canSend || sending} type="submit">
+            {sending ? "Envoi..." : "Envoyer ma demande"}
+          </button>
+        </div>
+      </div>
     </form>
   );
 }

@@ -5,7 +5,8 @@ import { getAgencyBySlug, getVehiclesForAgency } from "../../lib/data";
 export const dynamic = "force-dynamic";
 
 export default async function AgencyPage({ params }) {
-  const agency = await getAgencyBySlug(params.slug);
+  const { slug } = await params;
+  const agency = await getAgencyBySlug(slug);
 
   if (!agency) {
     return (
@@ -30,7 +31,7 @@ export default async function AgencyPage({ params }) {
           <p>{agency.website_intro || "Choisissez votre véhicule, vérifiez les disponibilités et envoyez votre demande de réservation en quelques minutes."}</p>
           <div className="hero-actions">
             <a className="btn btn-light" href="#vehicules">Voir les véhicules</a>
-            {agency.phone ? <a className="btn btn-dark" href={`tel:${agency.phone}`}>Contacter l’agence</a> : null}
+            {(agency.website_phone || agency.phone) ? <a className="btn btn-dark" href={`tel:${agency.website_phone || agency.phone}`}>Contacter l’agence</a> : null}
           </div>
         </section>
 
@@ -45,7 +46,7 @@ export default async function AgencyPage({ params }) {
           <div className="card"><p className="muted">Aucun véhicule disponible pour le moment.</p></div>
         ) : (
           <div className="grid">
-            {vehicles.map((vehicle) => <VehicleCard key={vehicle.id} slug={params.slug} vehicle={vehicle} />)}
+            {vehicles.map((vehicle) => <VehicleCard key={vehicle.id} slug={agency.website_slug || slug} vehicle={vehicle} />)}
           </div>
         )}
       </main>

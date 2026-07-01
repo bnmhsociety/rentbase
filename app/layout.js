@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "RentBase",
-  description: "Site public de réservation RentBase",
+  description: "Réservation automobile en ligne",
 };
 
 export default function RootLayout({ children }) {

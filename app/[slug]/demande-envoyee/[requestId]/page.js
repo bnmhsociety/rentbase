@@ -5,8 +5,9 @@ import { getRequestById } from "../../../../lib/data";
 export const dynamic = "force-dynamic";
 
 export default async function RequestSuccessPage({ params }) {
-  const request = await getRequestById(params.requestId);
-  if (!request) return <main className="container"><div className="card"><h1>Demande introuvable</h1></div></main>;
+  const { requestId } = await params;
+  const request = await getRequestById(requestId);
+  if (!request) return <main className="container" style={{ padding: 28 }}><div className="card"><h1>Demande introuvable</h1></div></main>;
 
   const agency = request.agencies;
   const vehicle = request.vehicles;
@@ -27,10 +28,12 @@ export default async function RequestSuccessPage({ params }) {
               <div className="summary-line"><span>Agence</span><strong>{agency.website_name || agency.name}</strong></div>
               <div className="summary-line"><span>Véhicule</span><strong>{vehicle?.name || "Véhicule"}</strong></div>
               <div className="summary-line"><span>Client</span><strong>{request.first_name} {request.last_name}</strong></div>
-              <div className="summary-line"><span>Départ</span><strong>{fmtDateTime(request.start_date)}</strong></div>
-              <div className="summary-line"><span>Retour</span><strong>{fmtDateTime(request.end_date)}</strong></div>
+              <div className="summary-line"><span>Email</span><strong>{request.email || "—"}</strong></div>
+              <div className="summary-line"><span>Téléphone</span><strong>{request.phone || "—"}</strong></div>
+              <div className="summary-line"><span>Départ</span><strong>{fmtDateTime(request.start_date, request.start_hour)}</strong></div>
+              <div className="summary-line"><span>Retour</span><strong>{fmtDateTime(request.end_date, request.end_hour)}</strong></div>
               <div className="summary-line"><span>Mode de paiement souhaité</span><strong>{paymentLabel}</strong></div>
-              <div className="summary-line"><span>Estimation 24h</span><strong>{eur(vehicle?.price_per_day)}</strong></div>
+              <div className="summary-line"><span>Prix 24h</span><strong>{eur(vehicle?.price_per_day)}</strong></div>
               <div className="summary-line"><span>Caution</span><strong>{eur(vehicle?.deposit_amount)}</strong></div>
             </div>
           </div>
@@ -39,7 +42,7 @@ export default async function RequestSuccessPage({ params }) {
             L’agence va examiner votre demande. Si elle accepte, vous recevrez un email avec le montant total, l’acompte à régler et le lien pour finaliser la réservation.
           </div>
 
-          <a className="btn btn-primary" style={{ marginTop: 18 }} href={`/${agency.website_slug}`}>Retour aux véhicules</a>
+          <a className="btn btn-primary" style={{ marginTop: 18 }} href={`/${agency.website_slug}`}>Retour aux véhicules disponibles</a>
         </div>
       </main>
     </div>
