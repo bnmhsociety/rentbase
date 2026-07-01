@@ -1,10 +1,13 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
 import { eur, fmtDateTime, overlap, rentalDays, sanitizeFileName, toIso } from "../../../lib/helpers";
 import { emailShell, sendEmail, summaryHtml } from "../../../lib/mail";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 async function uploadFile(bucket, path, file) {
   if (!file || typeof file === "string" || file.size === 0) return null;

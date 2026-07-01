@@ -1,8 +1,11 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import FinalizeClient from "../../../components/FinalizeClient";
 import { eur, fmtDateTime } from "../../../lib/helpers";
 import { getRequestByToken } from "../../../lib/data";
 
-export const dynamic = "force-dynamic";
 
 export default async function FinalizePage({ params }) {
   const { token } = await params;

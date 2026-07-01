@@ -1,8 +1,11 @@
-# RentBase site client V2 — correctif images proxy
+# RentBase Site Client — version dynamique images corrigée
 
-Cette version corrige les logos/photos qui ne s'affichent pas en utilisant une route interne `/api/media`.
+Version complète du site client RentBase.
 
-- Ne modifie pas Supabase.
-- Ne nécessite pas de rendre le bucket public.
-- Le site lit les images via Vercel côté serveur.
+Corrections incluses :
+- pages dynamiques Next.js pour éviter les liens images expirés en cache ;
+- route `/api/media` sans cache pour afficher les logos et photos véhicules ;
+- fallback lien signé Supabase + fallback URL publique ;
+- tunnel client complet : page agence, détail véhicule, réservation, demande envoyée, finalisation.
 
+Après upload sur GitHub, attendre Vercel Ready puis faire CTRL+F5 sur le site.

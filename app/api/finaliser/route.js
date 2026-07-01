@@ -1,10 +1,13 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
 import { emailShell, sendEmail, summaryHtml } from "../../../lib/mail";
 import { eur, fmtDateTime } from "../../../lib/helpers";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 async function sendConfirmationEmail(request) {
   if (!request.email) return { skipped: true };

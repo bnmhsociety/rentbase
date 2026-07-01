@@ -1,8 +1,11 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import Header from "../../components/Header";
 import VehicleCard from "../../components/VehicleCard";
 import { getAgencyBySlug, getVehiclesForAgency } from "../../lib/data";
 
-export const dynamic = "force-dynamic";
 
 export default async function AgencyPage({ params }) {
   const { slug } = await params;
