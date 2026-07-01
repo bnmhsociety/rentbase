@@ -20,6 +20,8 @@ function statusForDay(date, blocks) {
   for (const block of blocks || []) {
     const s = dayKey(block.start_date);
     const e = dayKey(block.end_date);
+    if (!s || !e) continue;
+
     if (key === s && key === e) {
       full = true;
     } else if (key === s) {
@@ -40,16 +42,17 @@ function statusForDay(date, blocks) {
 
 export default function AvailabilityCalendar({ blocks = [] }) {
   const now = new Date();
-  const months = [new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1)];
+  const months = [
+    new Date(now.getFullYear(), now.getMonth(), 1),
+    new Date(now.getFullYear(), now.getMonth() + 1, 1),
+  ];
   const labels = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   return (
     <div className="calendar">
       {months.map((month) => (
         <div key={month.toISOString()} className="card" style={{ boxShadow: "none" }}>
-          <h3>
-            {month.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
-          </h3>
+          <h3>{month.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</h3>
           <div className="calendar-head">{labels.map((l) => <div key={l}>{l}</div>)}</div>
           <div className="calendar-grid">
             {monthDays(month).map((d, i) => (
@@ -61,7 +64,7 @@ export default function AvailabilityCalendar({ blocks = [] }) {
           <div className="legend">
             <span><i />Disponible</span>
             <span><i className="red" />Non disponible</span>
-            <span>Les demi-cases indiquent un départ ou retour ce jour-là.</span>
+            <span>Une demi-case rouge indique un départ ou un retour le jour même.</span>
           </div>
         </div>
       ))}
