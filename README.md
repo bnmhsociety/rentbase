@@ -12,3 +12,9 @@ Corrections incluses :
 - Conservation des corrections images dynamiques.
 
 Dézippez puis uploadez le contenu du dossier à la racine du dépôt GitHub.
+
+
+## Correctif ajouté
+- Compression automatique des photos iPhone avant l’envoi de la demande.
+- Message d’erreur plus précis si Vercel bloque un fichier trop lourd.
+- Garde les corrections images dynamiques déjà ajoutées.

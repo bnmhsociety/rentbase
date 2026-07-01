@@ -260,6 +260,72 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
     return `${cleanBase}.${ext || "jpg"}`;
   }
 
+  
+async function compressImageForUpload(file, fallbackName) {
+  if (!file || typeof window === "undefined") return file;
+
+  const originalType = String(file.type || "").toLowerCase();
+  const isImage = originalType.startsWith("image/");
+
+  // Les PDF sont gardés comme PDF, avec un nom sécurisé.
+  if (!isImage) {
+    const cleanName = safeUploadFileName(file, fallbackName || "document.pdf");
+    try {
+      return new File([file], cleanName, { type: file.type || "application/octet-stream", lastModified: Date.now() });
+    } catch {
+      return file;
+    }
+  }
+
+  // Les photos iPhone sont souvent trop lourdes pour Vercel.
+  // On les réduit avant l'envoi pour éviter les erreurs serveur.
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        const maxSize = 1100;
+        const width = img.naturalWidth || img.width || 1100;
+        const height = img.naturalHeight || img.height || 1100;
+        const scale = Math.min(1, maxSize / Math.max(width, height));
+        const targetWidth = Math.max(1, Math.round(width * scale));
+        const targetHeight = Math.max(1, Math.round(height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(objectUrl);
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const cleanName = safeUploadFileName({ name: `${fallbackName || "document"}.jpg` }, `${fallbackName || "document"}.jpg`);
+          try {
+            resolve(new File([blob], cleanName, { type: "image/jpeg", lastModified: Date.now() }));
+          } catch {
+            resolve(blob);
+          }
+        }, "image/jpeg", 0.68);
+      } catch {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+
+    img.src = objectUrl;
+  });
+}
+
   function refreshDocsReady() {
     setTimeout(() => {
       const ok = ["license_front", "license_back", "id_front", "id_back", "address_proof"].every((id) => !!getFile(id));
@@ -305,19 +371,37 @@ export default function ReservationForm({ agency, vehicle, blocks }) {
       fd.append("vehicle_deposit_amount", String(vehicle.deposit_amount || 0));
       fd.append("deposit_amount", String(vehicle.booking_deposit_amount || 0));
 
-      // iPhone/Safari peut planter avec le 3e argument `filename` de FormData.append().
-      // On laisse donc le navigateur envoyer le fichier naturellement, puis le serveur sécurise le nom.
-      Object.entries(files).forEach(([key, file]) => fd.append(key, file));
+      const preparedFiles = {};
+      for (const [key, file] of Object.entries(files)) {
+        preparedFiles[key] = await compressImageForUpload(file, key);
+      }
+
+      const totalUploadSize = Object.values(preparedFiles).reduce((sum, file) => sum + Number(file?.size || 0), 0);
+      if (totalUploadSize > 4200000) {
+        throw new Error("Documents trop lourds. Réessayez avec des photos plus légères ou des captures d’écran.");
+      }
+
+      // On envoie des fichiers renommés simplement, sans caractères spéciaux.
+      Object.entries(preparedFiles).forEach(([key, file]) => fd.append(key, file));
 
       const apiUrl = typeof window !== "undefined"
         ? new URL("/api/booking-requests", window.location.origin).toString()
         : "/api/booking-requests";
 
       const res = await fetch(apiUrl, { method: "POST", body: fd });
-      const data = await res.json().catch(() => null);
+      const responseText = await res.text().catch(() => "");
+      let data = null;
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        data = null;
+      }
 
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error || "Erreur envoi demande");
+        if (!data && (res.status === 413 || responseText.toLowerCase().includes("payload"))) {
+          throw new Error("Documents trop lourds pour l’envoi. Réessayez avec des photos plus légères.");
+        }
+        throw new Error(data?.error || `Erreur serveur pendant l’envoi (${res.status}). Vérifiez les logs Vercel.`);
       }
 
       const slug = String(agency.website_slug || "").trim();
